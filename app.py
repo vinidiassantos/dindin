@@ -12,72 +12,77 @@ import requests
 # 1. Configuração da Página
 st.set_page_config(page_title="DinDin", page_icon="💰", layout="wide")
 
-# --- CSS TOTALMENTE RESPONSIVO E COMPATÍVEL COM LIGHT/DARK MODE ---
+# --- CSS RESPONSIVO E COM ESPAÇAMENTO REDUZIDO ---
 st.markdown("""
     <style>
-        .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+        .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
         header { visibility: hidden; }
+        
+        /* Reduz o gap global entre elementos */
+        div[data-testid="stVerticalBlock"] { gap: 0.4rem !important; }
+        div[data-testid="stMarkdownContainer"] p { margin-bottom: 0 !important; }
+        hr { margin: 8px 0 !important; }
 
         /* ===== HEADER CUSTOM ===== */
         .header-container {
-            display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-between; align-items: flex-end;
-            margin-top: -30px; margin-bottom: 15px;
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: flex-end;
+            margin-top: -15px; margin-bottom: 10px;
         }
-        .header-title { font-size: 2.2rem; font-weight: 700; margin: 0; line-height: 1; }
-        .header-subtitle { font-size: 0.9rem; color: gray; margin-top: 5px; }
-        .kpi-box { text-align: left; flex: 1; min-width: 100px; }
-        .kpi-label { font-size: 0.8rem; color: gray; margin-bottom: 3px; }
-        .kpi-value { font-size: 1.4rem; font-weight: 600; line-height: 1; overflow-wrap: anywhere; }
-        .kpi-sub { font-size: 0.8rem; margin-top: 3px; font-weight: bold; }
-        .kpi-meta { text-align: right; flex: 1.5; min-width: 150px; }
+        .header-title { font-size: 2rem; font-weight: 700; margin: 0; line-height: 1; }
+        .header-subtitle { font-size: 0.85rem; color: gray; margin-top: 3px; }
+        .kpi-box { text-align: left; flex: 1; min-width: 90px; }
+        .kpi-label { font-size: 0.75rem; color: gray; margin-bottom: 2px; }
+        .kpi-value { font-size: 1.3rem; font-weight: 600; line-height: 1; overflow-wrap: anywhere; }
+        .kpi-sub { font-size: 0.75rem; margin-top: 2px; font-weight: bold; }
+        .kpi-meta { text-align: right; flex: 1.5; min-width: 140px; }
 
-        .compact-list { margin-top: 0px; margin-bottom: 0px; padding-left: 20px; line-height: 1.4; font-size: 13px; }
-        .compact-list li { margin-bottom: 4px; }
+        .compact-list { margin-top: 0px; margin-bottom: 0px; padding-left: 20px; line-height: 1.3; font-size: 13px; }
+        .compact-list li { margin-bottom: 3px; }
         .news-link { color: #4da6ff; text-decoration: none; font-size: 11px; margin-left: 5px; }
         .news-link:hover { text-decoration: underline; }
 
         a.ticker-link { text-decoration: none; color: inherit; }
         a.ticker-link:hover { text-decoration: underline; }
 
-        /* ===== CSS PARA O RESUMO (SUBSTITUI AS COLUNAS) ===== */
+        /* ===== RESUMO (SUBSTITUI AS COLUNAS) ===== */
         .resumo-container {
-            display: flex; flex-wrap: wrap; gap: 10px;
-            background-color: rgba(128, 128, 128, 0.1);
-            padding: 15px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.2);
-            margin-bottom: 12px;
+            display: flex; flex-wrap: wrap; gap: 5px;
+            background-color: rgba(128, 128, 128, 0.08);
+            padding: 10px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.15);
+            margin-bottom: 8px;
         }
-        .resumo-box { flex: 1 1 calc(25% - 10px); min-width: 140px; text-align: center; }
-        .resumo-label { font-size: 0.85rem; color: gray; margin-bottom: 5px; }
-        .resumo-value { font-size: 1.4rem; font-weight: bold; overflow-wrap: anywhere; }
+        .resumo-box { flex: 1 1 calc(25% - 5px); min-width: 130px; text-align: center; }
+        .resumo-label { font-size: 0.8rem; color: gray; margin-bottom: 2px; }
+        .resumo-value { font-size: 1.3rem; font-weight: bold; overflow-wrap: anywhere; }
 
         /* =====================================================
            CELULAR / TABLET  (<= 768px)
            ===================================================== */
         @media (max-width: 768px) {
-            .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-            .header-container { margin-top: 0 !important; gap: 10px !important; }
-            .header-title { font-size: 1.6rem !important; }
-            .kpi-box { flex: 1 1 calc(50% - 5px) !important; min-width: 0 !important; }
+            .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.5rem !important; }
+            .header-container { margin-top: 0 !important; gap: 8px !important; }
+            .header-title { font-size: 1.5rem !important; }
+            .kpi-box { flex: 1 1 calc(50% - 4px) !important; min-width: 0 !important; }
             .kpi-meta { flex: 1 1 100% !important; text-align: left !important; }
             
-            .resumo-box { flex: 1 1 calc(50% - 10px); margin-bottom: 10px; }
-            .resumo-value { font-size: 1.2rem; }
+            .resumo-box { flex: 1 1 calc(50% - 5px); margin-bottom: 5px; }
+            .resumo-value { font-size: 1.1rem; }
 
             div[data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap !important;
-                gap: 10px !important;
+                gap: 5px !important;
             }
             div[data-testid="column"] {
-                flex: 1 1 calc(50% - 5px) !important;
-                min-width: calc(50% - 5px) !important;
-                max-width: calc(50% - 5px) !important;
+                flex: 1 1 calc(50% - 3px) !important;
+                min-width: calc(50% - 3px) !important;
+                max-width: calc(50% - 3px) !important;
             }
             div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] {
                 max-width: 100% !important;
-                padding: 8px !important;
+                padding: 6px !important;
             }
             div[data-testid="column"] div[data-testid="stMetricValue"] {
-                font-size: 1.1rem !important;
+                font-size: 1.05rem !important;
             }
             div[data-testid="column"] div[data-testid="stMarkdownContainer"] p {
                 font-size: 11px !important;
@@ -249,7 +254,7 @@ def gerar_tabela_renda_fixa(ativos, investidos, posicoes, ganhos, taxas_atuais):
         base_rate = taxas_atuais[i] if taxas_atuais[i] > 0 else 10.0
         taxas_ativo = []
         for j, mes in enumerate(meses_2026):
-            taxa_ano = base_rate + np.random.uniform(-0.5, 0.5)
+            taxa_ano = base_rate + np.random.uniform(-0.2, 0.2) # Ruído menor para ficar mais realista
             taxa_mensal = (1 + (taxa_ano / 100)) ** (1/12) - 1
             df.loc[df.index[i], mes] = posicoes[i] * ((1 + taxa_mensal) ** (j + 1))
             df.loc[df.index[i], f"Tx {mes}"] = taxa_ano
@@ -291,20 +296,20 @@ def get_oportunidades_renda_fixa():
     """
 
 # ==========================================
-# VALORES ATUALIZADOS (HARDCODED) - NOVEMBRO
+# VALORES CONSOLIDADOS ATUALIZADOS (NOVEMBRO)
 # ==========================================
 inv_geral = 145521.18
-pos_geral = 155096.10
-rent_geral = 6.59
+pos_geral = 155268.30
+rent_geral = 6.70
 
 inv_rv = 1147.50
-pos_rv = 1126.55
-rent_rv = -2.81
-ganho_rv_real = -32.21
+pos_rv = 1147.65
+rent_rv = 0.01
+ganho_rv_real = 0.15
 
-inv_rf = 101650.36
-ganho_rf = 5051.14
-rent_rf = 4.97
+inv_rf = 144373.68
+ganho_rf = 9746.82
+rent_rf = 6.75
 
 cor_rv = "#00FF00" if rent_rv >= 0 else "#FF4B4B"
 
@@ -313,7 +318,7 @@ cor_rv = "#00FF00" if rent_rv >= 0 else "#FF4B4B"
 # ==========================================
 header_html = f"""
 <div class="header-container" id="topo">
-<div style="flex: 2; min-width: 200px;">
+<div style="flex: 2; min-width: 180px;">
 <div class="header-title"><a href="#topo" target="_self" style="text-decoration: none; color: inherit;">💰 DinDin</a></div>
 <div class="header-subtitle">Seus investimentos e dicas em um só lugar.</div>
 </div>
@@ -340,11 +345,11 @@ header_html = f"""
 <div class="kpi-sub" style="color: #00FF00;">{fmt_pct(rent_rf)}</div>
 </div>
 <div class="kpi-meta">
-<div class="kpi-label">Meta 500k (21.0%)</div>
-<div class="kpi-value" style="font-size: 1.2rem;">Atual: R$ 393.319,45</div>
+<div class="kpi-label">Meta 500k (21.35%)</div>
+<div class="kpi-value" style="font-size: 1.1rem;">Atual: R$ 106.779,65</div>
 </div>
 </div>
-<hr style="margin: 0px 0 15px 0; border: 0; border-top: 1px solid #333;">
+<hr style="margin: 0px 0 10px 0; border: 0; border-top: 1px solid #333;">
 """
 st.markdown(header_html, unsafe_allow_html=True)
 
@@ -418,11 +423,11 @@ with aba_renda_variavel:
                             st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link}' target='_blank' style='font-size: 16px; font-weight: bold;'>{ativo}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa}</span></div>", unsafe_allow_html=True)
                             st.metric(label="Cotação Atual", value=fmt_brl(preco_atual), delta=f"{variacao_pct:.2f}%".replace(".", ","), label_visibility="collapsed")
                             
-                            html_tecnico = f"<div style='font-size: 12px; line-height: 1.3; margin-top: -10px; margin-bottom: 5px;'>📉 <b>Mín 6m:</b> {fmt_brl(min_6m)}<br>⏳ <b>Mín 5a:</b> {fmt_brl(min_5a)}{texto_data_5a}<br>📊 <b>RSI:</b> {rsi:.1f}".replace(".", ",") + f"<br>🤖 <b>Sinal:</b> <span style='color:{cor_sinal}; font-weight: bold;'>{sinal}</span><br>💼 <b>Share:</b> {share:.1f}%".replace(".", ",") + "</div>"
+                            html_tecnico = f"<div style='font-size: 12px; line-height: 1.3; margin-top: -5px; margin-bottom: 5px;'>📉 <b>Mín 6m:</b> {fmt_brl(min_6m)}<br>⏳ <b>Mín 5a:</b> {fmt_brl(min_5a)}{texto_data_5a}<br>📊 <b>RSI:</b> {rsi:.1f}".replace(".", ",") + f"<br>🤖 <b>Sinal:</b> <span style='color:{cor_sinal}; font-weight: bold;'>{sinal}</span><br>💼 <b>Share:</b> {share:.1f}%".replace(".", ",") + "</div>"
                             st.markdown(html_tecnico, unsafe_allow_html=True)
                             
                             if metricas.get("receita") or metricas.get("divida") or metricas.get("roe"):
-                                html_indicadores = "<hr style='margin: 5px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
+                                html_indicadores = "<hr style='margin: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
                                 if metricas.get("receita"): html_indicadores += f"<div style='font-size: 11px;'>💰 <b>Receita:</b> {fmt_grande(metricas['receita'])}</div>"
                                 if metricas.get("divida"): html_indicadores += f"<div style='font-size: 11px;'>🏦 <b>Dív. Líq:</b> {fmt_grande(metricas['divida'])}</div>"
                                 if metricas.get("roe"): html_indicadores += f"<div style='font-size: 11px;'>🏆 <b>ROE:</b> {fmt_pct(metricas['roe'])}</div>"
@@ -430,9 +435,6 @@ with aba_renda_variavel:
                             
                             st.progress(share / 100.0) 
 
-    # ==========================================
-    # LÓGICA DO RADAR OTIMIZADA
-    # ==========================================
     radar_tickers = ['PETR4', 'BBAS3', 'ITUB4', 'BBDC4', 'MGLU3', 'LREN3', 'VIVT3', 'TAEE11', 'KLBN11', 'SANB11', 'BPAC11', 'HGLG11', 'KNRI11', 'MXRF11']
     oportunidades = []
 
@@ -458,7 +460,6 @@ with aba_renda_variavel:
                             "data_min_5a": texto_data_5a_radar, "score": score
                         })
 
-    # Se houver oportunidades, exibe a seção do Radar
     if oportunidades:
         st.divider()
         st.subheader("🔥 Radar")
@@ -478,7 +479,7 @@ with aba_renda_variavel:
                         with st.container(border=True):
                             st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link_op}' target='_blank' style='font-size: 16px; font-weight: bold; color: #00FF00;'>{op['ativo']}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa_radar}</span></div>", unsafe_allow_html=True)
                             st.metric(label="Preço", value=fmt_brl(op['preco']), delta=f"{op['variacao']:.2f}%".replace(".", ","), label_visibility="collapsed")
-                            st.markdown(f"<div style='font-size: 12px; line-height: 1.3; margin-top: -10px; margin-bottom: 5px;'>🎯 <b>RSI:</b> {op['rsi']:.1f}".replace(".", ",") + f"<br>🏆 <b>Score:</b> {estrelas} ({op['score']}/4)<br>📉 <b>Mín 6m:</b> {fmt_brl(op['min_6m'])}<br>⏳ <b>Mín 5a:</b> {fmt_brl(op['min_5a'])}{op['data_min_5a']}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='font-size: 12px; line-height: 1.3; margin-top: -5px; margin-bottom: 5px;'>🎯 <b>RSI:</b> {op['rsi']:.1f}".replace(".", ",") + f"<br>🏆 <b>Score:</b> {estrelas} ({op['score']}/4)<br>📉 <b>Mín 6m:</b> {fmt_brl(op['min_6m'])}<br>⏳ <b>Mín 5a:</b> {fmt_brl(op['min_5a'])}{op['data_min_5a']}</div>", unsafe_allow_html=True)
 
     st.divider()
     st.markdown("#### 💡 Notícias dos Seus Ativos - Renda Variável (Últimas 24h)")
@@ -495,14 +496,14 @@ with aba_renda_fixa:
     
     ativos_fam = ["IPCA+ 2032", "PRÉ 2032", "Selic 2031"]
     inv_fam = [2987.73, 1476.27, 96038.86]
-    pos_fam = [3092.00, 1455.00, 101007.00]
-    gan_fam = [104.27, -21.27, 4968.14]
-    rent_fam = [3.49, -1.44, 5.17]
+    pos_fam = [3092.00, 1457.00, 101083.00]
+    gan_fam = [104.27, -19.27, 5044.14]
+    rent_fam = [3.49, -1.31, 5.25]
     
     total_investido = 101650.36
-    total_posicao = 106680.55
-    total_ganho = 5051.14
-    rent_media = 4.97
+    total_posicao = 106779.65
+    total_ganho = 5129.14
+    rent_media = 5.05
 
     resumo_rf_html = f"""
     <div class="resumo-container">
@@ -514,7 +515,6 @@ with aba_renda_fixa:
     """
     st.markdown(resumo_rf_html, unsafe_allow_html=True)
 
-    st.write("")
     st.markdown("#### Detalhamento e Evolução Mês a Mês (2026)")
     
     df_fam, df_grafico_fam = gerar_tabela_renda_fixa(ativos_fam, inv_fam, pos_fam, gan_fam, rent_fam)
@@ -541,7 +541,6 @@ with aba_renda_fixa:
 
     st.dataframe(styled_fam, hide_index=True, use_container_width=True, column_config=config_colunas)
 
-    st.write("")
     st.markdown("#### Histórico de Taxas")
     
     df_melt = df_grafico_fam.reset_index().melt('index', var_name='Ativo', value_name='Taxa')
@@ -559,7 +558,7 @@ with aba_renda_fixa:
         x=alt.X('Mês:N'), y=alt.Y('Taxa:Q'), text=alt.Text('Taxa:Q', format='.1f'), color=alt.Color('Ativo:N', legend=None)
     )
 
-    chart_fam = (line + text).properties(height=350).interactive()
+    chart_fam = (line + text).properties(height=300).interactive()
     st.altair_chart(chart_fam, use_container_width=True)
 
     st.divider()
@@ -577,14 +576,14 @@ with aba_maria:
     
     ativos_maria = ["IPCA+ 2029", "IPCA+ 2032", "IPCA+ 2035 c/juros sem", "PRÉ 2032", "PRÉ 2035 c/juros sem", "SELIC 2031"]
     inv_maria = [5779.67, 1580.87, 5444.10, 1452.61, 2370.30, 26095.77]
-    pos_maria = [6524.00, 1636.00, 5658.00, 1475.00, 2252.00, 29744.00]
-    gan_maria = [744.33, 55.13, 213.90, 22.39, -118.30, 3648.23]
-    rent_maria = [12.88, 3.49, 3.93, 1.54, -4.99, 13.98]
+    pos_maria = [6528.00, 1636.00, 5658.00, 1475.00, 2254.00, 29790.00]
+    gan_maria = [748.33, 55.13, 213.90, 22.39, -116.30, 3694.23]
+    rent_maria = [12.95, 3.49, 3.93, 1.54, -4.91, 14.16]
     
     total_investido_maria = 42723.32
-    total_posicao_maria = 47289.00
-    total_ganho_maria = 4565.68
-    rent_media_maria = 10.69
+    total_posicao_maria = 47341.00
+    total_ganho_maria = 4617.68
+    rent_media_maria = 10.81
 
     resumo_maria_html = f"""
     <div class="resumo-container">
@@ -596,7 +595,6 @@ with aba_maria:
     """
     st.markdown(resumo_maria_html, unsafe_allow_html=True)
 
-    st.write("")
     st.markdown("#### Detalhamento e Evolução Mês a Mês (2026)")
     
     df_maria, df_grafico_maria = gerar_tabela_renda_fixa(ativos_maria, inv_maria, pos_maria, gan_maria, rent_maria)
@@ -619,7 +617,6 @@ with aba_maria:
 
     st.dataframe(styled_maria, hide_index=True, use_container_width=True, column_config=config_colunas)
 
-    st.write("")
     st.markdown("#### Histórico de Taxas")
     
     df_melt_maria = df_grafico_maria.reset_index().melt('index', var_name='Ativo', value_name='Taxa')
@@ -637,7 +634,7 @@ with aba_maria:
         x=alt.X('Mês:N'), y=alt.Y('Taxa:Q'), text=alt.Text('Taxa:Q', format='.1f'), color=alt.Color('Ativo:N', legend=None)
     )
 
-    chart_maria = (line_maria + text_maria).properties(height=350).interactive()
+    chart_maria = (line_maria + text_maria).properties(height=300).interactive()
     st.altair_chart(chart_maria, use_container_width=True)
 
     st.divider()
