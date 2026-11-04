@@ -51,12 +51,12 @@ st.markdown("""
             padding: 10px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.15);
             margin-bottom: 8px;
         }
-        .resumo-box { flex: 1 1 calc(25% - 5px); min-width: 130px; text-align: center; }
+        .resumo-box { flex: 1 1 calc(50% - 5px); min-width: 130px; text-align: center; }
         .resumo-label { font-size: 0.8rem; color: gray; margin-bottom: 2px; }
         .resumo-value { font-size: 1.3rem; font-weight: bold; overflow-wrap: anywhere; }
 
         /* =====================================================
-           CELULAR / TABLET  (<= 768px)
+           CELULAR / TABLET  (<= 768px) - FORÇA 2 CARDS POR LINHA
            ===================================================== */
         @media (max-width: 768px) {
             .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.5rem !important; }
@@ -68,36 +68,27 @@ st.markdown("""
             .resumo-box { flex: 1 1 calc(50% - 5px); margin-bottom: 5px; }
             .resumo-value { font-size: 1.1rem; }
 
+            /* Força as colunas do Streamlit a ficarem 2 por linha no mobile */
             div[data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap !important;
-                gap: 5px !important;
+                gap: 8px !important;
             }
             div[data-testid="column"] {
-                flex: 1 1 calc(50% - 3px) !important;
-                min-width: calc(50% - 3px) !important;
-                max-width: calc(50% - 3px) !important;
+                flex: 1 1 calc(50% - 4px) !important;
+                min-width: calc(50% - 4px) !important;
+                max-width: calc(50% - 4px) !important;
             }
             div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] {
                 max-width: 100% !important;
                 padding: 6px !important;
             }
             div[data-testid="column"] div[data-testid="stMetricValue"] {
-                font-size: 1.05rem !important;
+                font-size: 1.1rem !important;
             }
             div[data-testid="column"] div[data-testid="stMarkdownContainer"] p {
                 font-size: 11px !important;
             }
             div[data-baseweb="tab-list"] { overflow-x: auto !important; flex-wrap: nowrap !important; }
-        }
-
-        @media (max-width: 380px) {
-            .kpi-box { flex: 1 1 100% !important; }
-            .resumo-box { flex: 1 1 100% !important; }
-            div[data-testid="column"] {
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
-                max-width: 100% !important;
-            }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -254,7 +245,7 @@ def gerar_tabela_renda_fixa(ativos, investidos, posicoes, ganhos, taxas_atuais):
         base_rate = taxas_atuais[i] if taxas_atuais[i] > 0 else 10.0
         taxas_ativo = []
         for j, mes in enumerate(meses_2026):
-            taxa_ano = base_rate + np.random.uniform(-0.2, 0.2) # Ruído menor para ficar mais realista
+            taxa_ano = base_rate + np.random.uniform(-0.2, 0.2)
             taxa_mensal = (1 + (taxa_ano / 100)) ** (1/12) - 1
             df.loc[df.index[i], mes] = posicoes[i] * ((1 + taxa_mensal) ** (j + 1))
             df.loc[df.index[i], f"Tx {mes}"] = taxa_ano
