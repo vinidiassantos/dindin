@@ -311,7 +311,6 @@ header_html = f"""
 <div class="header-container" id="topo">
 <div style="flex: 2; min-width: 180px;">
 <div class="header-title"><a href="#topo" target="_self" style="text-decoration: none; color: inherit;">💰 DinDin</a></div>
-<div class="header-subtitle">Seus investimentos e dicas em um só lugar.</div>
 </div>
 <div class="kpi-box">
 <div class="kpi-label">Total Investido</div>
