@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import extra_streamlit_components as stx
+from streamlit_js_eval import streamlit_js_eval
 import hashlib
 from datetime import datetime, timedelta
 import numpy as np 
@@ -12,13 +13,13 @@ import requests
 # 1. Configuração da Página
 st.set_page_config(page_title="DinDin", page_icon="💰", layout="wide")
 
-# --- CSS RESPONSIVO E COM ESPAÇAMENTO REDUZIDO ---
+# --- CSS TOTALMENTE RESPONSIVO ---
 st.markdown("""
     <style>
-        .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+        .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
         header { visibility: hidden; }
         
-        /* Reduz o gap global entre elementos */
+        /* Reduz o gap global */
         div[data-testid="stVerticalBlock"] { gap: 0.4rem !important; }
         div[data-testid="stMarkdownContainer"] p { margin-bottom: 0 !important; }
         hr { margin: 8px 0 !important; }
@@ -26,10 +27,9 @@ st.markdown("""
         /* ===== HEADER CUSTOM ===== */
         .header-container {
             display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: flex-end;
-            margin-top: -15px; margin-bottom: 10px;
+            margin-top: -10px; margin-bottom: 10px;
         }
         .header-title { font-size: 2rem; font-weight: 700; margin: 0; line-height: 1; }
-        .header-subtitle { font-size: 0.85rem; color: gray; margin-top: 3px; }
         .kpi-box { text-align: left; flex: 1; min-width: 90px; }
         .kpi-label { font-size: 0.75rem; color: gray; margin-bottom: 2px; }
         .kpi-value { font-size: 1.3rem; font-weight: 600; line-height: 1; overflow-wrap: anywhere; }
@@ -44,7 +44,7 @@ st.markdown("""
         a.ticker-link { text-decoration: none; color: inherit; }
         a.ticker-link:hover { text-decoration: underline; }
 
-        /* ===== RESUMO (SUBSTITUI AS COLUNAS) ===== */
+        /* ===== RESUMO ===== */
         .resumo-container {
             display: flex; flex-wrap: wrap; gap: 5px;
             background-color: rgba(128, 128, 128, 0.08);
@@ -55,39 +55,15 @@ st.markdown("""
         .resumo-label { font-size: 0.8rem; color: gray; margin-bottom: 2px; }
         .resumo-value { font-size: 1.3rem; font-weight: bold; overflow-wrap: anywhere; }
 
-        /* =====================================================
-           CELULAR / TABLET  (<= 768px) - FORÇA 2 CARDS POR LINHA
-           ===================================================== */
+        /* Ajustes finos para telas pequenas */
         @media (max-width: 768px) {
-            .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; padding-top: 0.5rem !important; }
-            .header-container { margin-top: 0 !important; gap: 8px !important; }
-            .header-title { font-size: 1.5rem !important; }
+            .header-title { font-size: 1.6rem !important; }
             .kpi-box { flex: 1 1 calc(50% - 4px) !important; min-width: 0 !important; }
             .kpi-meta { flex: 1 1 100% !important; text-align: left !important; }
-            
-            .resumo-box { flex: 1 1 calc(50% - 5px); margin-bottom: 5px; }
             .resumo-value { font-size: 1.1rem; }
-
-            /* Força as colunas do Streamlit a ficarem 2 por linha no mobile */
-            div[data-testid="stHorizontalBlock"] {
-                flex-wrap: wrap !important;
-                gap: 8px !important;
-            }
-            div[data-testid="column"] {
-                flex: 1 1 calc(50% - 4px) !important;
-                min-width: calc(50% - 4px) !important;
-                max-width: calc(50% - 4px) !important;
-            }
-            div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] {
-                max-width: 100% !important;
-                padding: 6px !important;
-            }
-            div[data-testid="column"] div[data-testid="stMetricValue"] {
-                font-size: 1.1rem !important;
-            }
-            div[data-testid="column"] div[data-testid="stMarkdownContainer"] p {
-                font-size: 11px !important;
-            }
+            div[data-testid="column"] div[data-testid="stVerticalBlockBorderWrapper"] { padding: 6px !important; }
+            div[data-testid="column"] div[data-testid="stMetricValue"] { font-size: 1.1rem !important; }
+            div[data-testid="column"] div[data-testid="stMarkdownContainer"] p { font-size: 11px !important; }
             div[data-baseweb="tab-list"] { overflow-x: auto !important; flex-wrap: nowrap !important; }
         }
     </style>
@@ -305,11 +281,19 @@ rent_rf = 6.75
 cor_rv = "#00FF00" if rent_rv >= 0 else "#FF4B4B"
 
 # ==========================================
-# CABEÇALHO COMPACTO
+# DETECÇÃO DE TELA (MOBILE VS DESKTOP)
+# ==========================================
+# Pega a largura da tela via JavaScript. Se for None (primeira renderização), assume desktop (1200).
+screen_width = streamlit_js_eval(js_expressions='window.innerWidth', key='WIDTH') or 1200
+is_mobile = screen_width < 768
+num_cols = 2 if is_mobile else 4
+
+# ==========================================
+# CABEÇALHO COMPACTO (SEM A FRASE DO LOGO)
 # ==========================================
 header_html = f"""
 <div class="header-container" id="topo">
-<div style="flex: 2; min-width: 180px;">
+<div style="flex: 2; min-width: 150px;">
 <div class="header-title"><a href="#topo" target="_self" style="text-decoration: none; color: inherit;">💰 DinDin</a></div>
 </div>
 <div class="kpi-box">
@@ -347,7 +331,7 @@ st.markdown(header_html, unsafe_allow_html=True)
 # CRIANDO AS 3 ABAS
 # ==========================================
 aba_renda_variavel, aba_renda_fixa, aba_maria = st.tabs([
-    "📈 Renda Variável (Ações e FIIs)", "🏦 Renda Fixa", "👩 Invest Maria"
+    "📈 Renda Variável", "🏦 Renda Fixa", "👩 Invest Maria"
 ])
 
 # ==========================================
@@ -382,7 +366,6 @@ with aba_renda_variavel:
     """
     st.markdown(resumo_html, unsafe_allow_html=True)
     
-    num_cols = 4
     num_rows = math.ceil(len(carteira_acoes) / num_cols)
 
     for row in range(num_rows):
@@ -517,119 +500,4 @@ with aba_renda_fixa:
                   .format({
                       "Investido (R$)": lambda x: fmt_brl(x),
                       "Posição Atual (R$)": lambda x: fmt_brl(x),
-                      "Ganho (R$)": lambda x: fmt_brl(x),
-                      "Taxa (%)": lambda x: fmt_pct(x),
-                      **{mes: lambda x: fmt_brl(x) for mes in ["Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26", "Ago/26", "Set/26", "Out/26", "Nov/26", "Dez/26"]},
-                      **{f"Tx {mes}": lambda x: fmt_pct(x) for mes in ["Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26", "Ago/26", "Set/26", "Out/26", "Nov/26", "Dez/26"]}
-                  })
-                  .set_properties(subset=cols_to_center_fam, **{'text-align': 'center'})
-                  .set_properties(subset=['Share (%)'], **{'border-right': '2px solid #555'}))
-
-    config_colunas = {
-        "Share (%)": st.column_config.ProgressColumn("Share (%)", format="%.1f%%", min_value=0, max_value=100)
-    }
-
-    st.dataframe(styled_fam, hide_index=True, use_container_width=True, column_config=config_colunas)
-
-    st.markdown("#### Histórico de Taxas")
-    
-    df_melt = df_grafico_fam.reset_index().melt('index', var_name='Ativo', value_name='Taxa')
-    df_melt = df_melt.rename(columns={'index': 'Mês'})
-    df_ultimo_mes = df_melt[df_melt['Mês'] == 'Out']
-
-    line = alt.Chart(df_melt).mark_line(point=True).encode(
-        x=alt.X('Mês:N', sort=None, title='Mês', axis=alt.Axis(labelAngle=0)),
-        y=alt.Y('Taxa:Q', title='Taxa Anualizada (%)', scale=alt.Scale(zero=False)),
-        color=alt.Color('Ativo:N', legend=alt.Legend(orient='bottom', columns=3)),
-        tooltip=[alt.Tooltip('Mês:N', title='Mês'), alt.Tooltip('Ativo:N', title='Ativo'), alt.Tooltip('Taxa:Q', title='Taxa (%)', format='.2f')]
-    )
-
-    text = alt.Chart(df_ultimo_mes).mark_text(align='left', dx=5, fontSize=12, fontWeight='bold').encode(
-        x=alt.X('Mês:N'), y=alt.Y('Taxa:Q'), text=alt.Text('Taxa:Q', format='.1f'), color=alt.Color('Ativo:N', legend=None)
-    )
-
-    chart_fam = (line + text).properties(height=300).interactive()
-    st.altair_chart(chart_fam, use_container_width=True)
-
-    st.divider()
-    st.markdown("#### 💡 Notícias dos Seus Títulos - Renda Fixa (Últimas 24h)")
-    st.markdown(get_noticias_renda_fixa(ativos_fam), unsafe_allow_html=True)
-    st.divider()
-    st.markdown("#### 🚀 Oportunidades do Mercado - Fora da Carteira")
-    st.markdown(get_oportunidades_renda_fixa(), unsafe_allow_html=True)
-
-# ==========================================
-# ABA 3: INVEST MARIA
-# ==========================================
-with aba_maria:
-    st.subheader("Painel de Renda Fixa - Maria")
-    
-    ativos_maria = ["IPCA+ 2029", "IPCA+ 2032", "IPCA+ 2035 c/juros sem", "PRÉ 2032", "PRÉ 2035 c/juros sem", "SELIC 2031"]
-    inv_maria = [5779.67, 1580.87, 5444.10, 1452.61, 2370.30, 26095.77]
-    pos_maria = [6528.00, 1636.00, 5658.00, 1475.00, 2254.00, 29790.00]
-    gan_maria = [748.33, 55.13, 213.90, 22.39, -116.30, 3694.23]
-    rent_maria = [12.95, 3.49, 3.93, 1.54, -4.91, 14.16]
-    
-    total_investido_maria = 42723.32
-    total_posicao_maria = 47341.00
-    total_ganho_maria = 4617.68
-    rent_media_maria = 10.81
-
-    resumo_maria_html = f"""
-    <div class="resumo-container">
-        <div class="resumo-box"><div class="resumo-label">Total Investido</div><div class="resumo-value">{fmt_brl(total_investido_maria)}</div></div>
-        <div class="resumo-box"><div class="resumo-label">Posição Atual</div><div class="resumo-value">{fmt_brl(total_posicao_maria)}</div></div>
-        <div class="resumo-box"><div class="resumo-label">Ganho Total</div><div class="resumo-value">{fmt_brl(total_ganho_maria)}</div></div>
-        <div class="resumo-box"><div class="resumo-label">Rentabilidade Média</div><div class="resumo-value">{fmt_pct(rent_media_maria)}</div></div>
-    </div>
-    """
-    st.markdown(resumo_maria_html, unsafe_allow_html=True)
-
-    st.markdown("#### Detalhamento e Evolução Mês a Mês (2026)")
-    
-    df_maria, df_grafico_maria = gerar_tabela_renda_fixa(ativos_maria, inv_maria, pos_maria, gan_maria, rent_maria)
-    df_maria.insert(5, "Share (%)", (df_maria["Investido (R$)"] / total_investido_maria) * 100)
-
-    cols_to_center_maria = [c for c in df_maria.columns if c != 'Ativo']
-
-    styled_maria = (df_maria.style
-                    .map(style_taxa, subset=['Taxa (%)'])
-                    .format({
-                        "Investido (R$)": lambda x: fmt_brl(x),
-                        "Posição Atual (R$)": lambda x: fmt_brl(x),
-                        "Ganho (R$)": lambda x: fmt_brl(x),
-                        "Taxa (%)": lambda x: fmt_pct(x),
-                        **{mes: lambda x: fmt_brl(x) for mes in ["Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26", "Ago/26", "Set/26", "Out/26", "Nov/26", "Dez/26"]},
-                        **{f"Tx {mes}": lambda x: fmt_pct(x) for mes in ["Jan/26", "Fev/26", "Mar/26", "Abr/26", "Mai/26", "Jun/26", "Jul/26", "Ago/26", "Set/26", "Out/26", "Nov/26", "Dez/26"]}
-                    })
-                    .set_properties(subset=cols_to_center_maria, **{'text-align': 'center'})
-                    .set_properties(subset=['Share (%)'], **{'border-right': '2px solid #555'}))
-
-    st.dataframe(styled_maria, hide_index=True, use_container_width=True, column_config=config_colunas)
-
-    st.markdown("#### Histórico de Taxas")
-    
-    df_melt_maria = df_grafico_maria.reset_index().melt('index', var_name='Ativo', value_name='Taxa')
-    df_melt_maria = df_melt_maria.rename(columns={'index': 'Mês'})
-    df_ultimo_mes_maria = df_melt_maria[df_melt_maria['Mês'] == 'Out']
-
-    line_maria = alt.Chart(df_melt_maria).mark_line(point=True).encode(
-        x=alt.X('Mês:N', sort=None, title='Mês', axis=alt.Axis(labelAngle=0)),
-        y=alt.Y('Taxa:Q', title='Taxa Anualizada (%)', scale=alt.Scale(zero=False)),
-        color=alt.Color('Ativo:N', legend=alt.Legend(orient='bottom', columns=3)),
-        tooltip=[alt.Tooltip('Mês:N', title='Mês'), alt.Tooltip('Ativo:N', title='Ativo'), alt.Tooltip('Taxa:Q', title='Taxa (%)', format='.2f')]
-    )
-
-    text_maria = alt.Chart(df_ultimo_mes_maria).mark_text(align='left', dx=5, fontSize=12, fontWeight='bold').encode(
-        x=alt.X('Mês:N'), y=alt.Y('Taxa:Q'), text=alt.Text('Taxa:Q', format='.1f'), color=alt.Color('Ativo:N', legend=None)
-    )
-
-    chart_maria = (line_maria + text_maria).properties(height=300).interactive()
-    st.altair_chart(chart_maria, use_container_width=True)
-
-    st.divider()
-    st.markdown("#### 💡 Notícias dos Seus Títulos - Renda Fixa (Últimas 24h)")
-    st.markdown(get_noticias_renda_fixa(ativos_maria), unsafe_allow_html=True)
-    st.divider()
-    st.markdown("#### 🚀 Oportunidades do Mercado - Fora da Carteira")
-    st.markdown(get_oportunidades_renda_fixa(), unsafe_allow_html=True)
+                      "Ganho (R$)": lambda x: fmt_brl
