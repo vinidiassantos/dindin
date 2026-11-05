@@ -141,7 +141,7 @@ def limpar_pct(val):
     except: return 0.0
 
 def gerar_link_investidor10(ticker):
-    ticker_lower = ticker.lower()
+    ticker_lower = str(ticker).lower()
     if ticker_lower in ['xpml11', 'mcci11', 'hglg11', 'knri11', 'mxrf11']:
         return f"https://investidor10.com.br/fiis/{ticker_lower}/"
     elif ticker_lower in ['bova11']:
@@ -222,44 +222,64 @@ inv_rv = 1147.50; pos_rv = 1147.65; rent_rv = 0.01; ganho_rv_real = 0.15
 inv_rf = 101650.36; pos_rf = 106779.65; rent_rf = 5.05; ganho_rf_real = 5129.14
 inv_maria = 42723.32; pos_maria = 47341.00; ganho_maria = 4617.68; rent_maria = 10.81
 
+# Inicializa DataFrames vazios para evitar erro de "not defined"
+df_total = pd.DataFrame()
+df_rv = pd.DataFrame()
+df_rf = pd.DataFrame()
+df_maria = pd.DataFrame()
+df_macro = pd.DataFrame()
+
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # Lendo as abas
-    df_total = conn.read(worksheet="Total", ttl=30)
-    df_rv = conn.read(worksheet="Renda Variável", ttl=30)
-    df_rf = conn.read(worksheet="Renda Fixa", ttl=30)
-    df_maria = conn.read(worksheet="Investimentos Maria", ttl=30)
-    df_macro = conn.read(worksheet="Indicadores Macro", ttl=30)
+    # Lê cada aba de forma independente
+    try: df_total = conn.read(worksheet="Total", ttl=30)
+    except: pass
+        
+    try: df_rv = conn.read(worksheet="Renda Variável", ttl=30)
+    except: pass
+        
+    try: df_rf = conn.read(worksheet="Renda Fixa", ttl=30)
+    except: pass
+        
+    try: df_maria = conn.read(worksheet="Investimentos Maria", ttl=30)
+    except: pass
+        
+    try: df_macro = conn.read(worksheet="Indicadores Macro", ttl=30)
+    except: st.sidebar.warning("⚠️ Aba 'Indicadores Macro' não encontrada na planilha.")
     
-    # Extração da aba TOTAL (Linha 5 do Excel, índice 4)
-    pos_geral = limpar_moeda(df_total.iloc[4, 0]) # Coluna A (D14)
-    inv_geral = limpar_moeda(df_total.iloc[4, 2]) # Coluna C (C14)
-    lucro_geral = limpar_moeda(df_total.iloc[4, 4]) # Coluna E (E14)
-    rent_geral = limpar_pct(df_total.iloc[4, 6]) * 100 # Coluna G (F14)
+    # Extração da aba TOTAL (Só executa se o df_total não estiver vazio)
+    if not df_total.empty:
+        pos_geral = limpar_moeda(df_total.iloc[4, 0])
+        inv_geral = limpar_moeda(df_total.iloc[4, 2])
+        lucro_geral = limpar_moeda(df_total.iloc[4, 4])
+        rent_geral = limpar_pct(df_total.iloc[4, 6]) * 100
 
-    # Extração Renda Variável (Linha 2 do Excel, índice 1)
-    inv_rv = limpar_moeda(df_rv.iloc[1, 5])
-    pos_rv = limpar_moeda(df_rv.iloc[1, 6])
-    ganho_rv_real = limpar_moeda(df_rv.iloc[1, 7])
-    rent_rv = limpar_pct(df_rv.iloc[1, 8]) * 100
+    # Extração Renda Variável
+    if not df_rv.empty:
+        inv_rv = limpar_moeda(df_rv.iloc[1, 5])
+        pos_rv = limpar_moeda(df_rv.iloc[1, 6])
+        ganho_rv_real = limpar_moeda(df_rv.iloc[1, 7])
+        rent_rv = limpar_pct(df_rv.iloc[1, 8]) * 100
 
-    # Extração Renda Fixa (Linha 2 do Excel, índice 1)
-    inv_rf = limpar_moeda(df_rf.iloc[1, 4])
-    pos_rf = limpar_moeda(df_rf.iloc[1, 5])
-    ganho_rf_real = limpar_moeda(df_rf.iloc[1, 6])
-    rent_rf = limpar_pct(df_rf.iloc[1, 7]) * 100
+    # Extração Renda Fixa
+    if not df_rf.empty:
+        inv_rf = limpar_moeda(df_rf.iloc[1, 4])
+        pos_rf = limpar_moeda(df_rf.iloc[1, 5])
+        ganho_rf_real = limpar_moeda(df_rf.iloc[1, 6])
+        rent_rf = limpar_pct(df_rf.iloc[1, 7]) * 100
 
-    # Extração Maria (Linha 2 do Excel, índice 1)
-    inv_maria = limpar_moeda(df_maria.iloc[1, 4])
-    pos_maria = limpar_moeda(df_maria.iloc[1, 5])
-    ganho_maria = limpar_moeda(df_maria.iloc[1, 6])
-    rent_maria = limpar_pct(df_maria.iloc[1, 7]) * 100
+    # Extração Maria
+    if not df_maria.empty:
+        inv_maria = limpar_moeda(df_maria.iloc[1, 4])
+        pos_maria = limpar_moeda(df_maria.iloc[1, 5])
+        ganho_maria = limpar_moeda(df_maria.iloc[1, 6])
+        rent_maria = limpar_pct(df_maria.iloc[1, 7]) * 100
     
     st.sidebar.success("📈 Dados do Google Sheets carregados!")
     
 except Exception as e:
-    st.sidebar.warning(f"⚠️ Usando dados locais (Planilha offline: {e})")
+    st.sidebar.warning(f"⚠️ Usando dados locais (Erro na conexão: {e})")
 
 cor_rv = "#00FF00" if rent_rv >= 0 else "#FF4B4B"
 
@@ -298,12 +318,14 @@ with aba_renda_variavel:
     st.subheader("Sua Carteira de Cotações")
     
     try:
+        # Tenta extrair da planilha
         carteira_acoes = df_rv.iloc[4:10, 0].dropna().tolist() + df_rv.iloc[11:14, 0].dropna().tolist()
         inv_ativos = df_rv.iloc[4:10, 5].apply(limpar_moeda).tolist() + df_rv.iloc[11:14, 5].apply(limpar_moeda).tolist()
-        # Limpa strings vazias da lista
-        carteira_acoes = [a for a in carteira_acoes if isinstance(a, str) and len(a) <= 6]
+        # Limpa strings vazias ou cabeçalhos indesejados
+        carteira_acoes = [str(a).strip() for a in carteira_acoes if isinstance(a, str) and len(str(a).strip()) > 0 and len(str(a).strip()) <= 6]
         inv_ativos = [i for i in inv_ativos if i > 0]
     except:
+        # Fallback
         carteira_acoes = ['ITSA4', 'BOVA11', 'CEAB3', 'VALE3', 'WEGE3', 'XPML11', 'MCCI11']
         inv_ativos = [130.10, 173.23, 107.40, 322.70, 224.45, 99.73, 89.89]
     
@@ -317,6 +339,7 @@ with aba_renda_variavel:
     """
     st.markdown(resumo_html, unsafe_allow_html=True)
     
+    # 2 CARDS POR LINHA
     for i in range(0, len(carteira_acoes), 2):
         cols = st.columns(2)
         
@@ -399,13 +422,6 @@ with aba_renda_fixa:
     
     st.dataframe(styled_df, hide_index=True, use_container_width=True)
 
-    st.divider()
-    st.markdown("#### 💡 Notícias dos Seus Títulos - Renda Fixa")
-    noticias_rf = "<ul class='compact-list'>"
-    for t in ativos_fam:
-        noticias_rf += f'<li><b>{t}:</b> Acompanhe as taxas do Tesouro Direto hoje. <a class="news-link" href="https://www.infomoney.com.br" target="_blank">[Ler mais]</a></li>'
-    st.markdown(noticias_rf + "</ul>", unsafe_allow_html=True)
-
 # ==========================================
 # ABA 3: INVEST MARIA
 # ==========================================
@@ -456,50 +472,52 @@ with aba_mercado:
     st.subheader("🌍 Indicadores de Mercado")
     st.markdown("Dados em tempo real via Google Sheets (aba Indicadores Macro).")
     
-    try:
-        # Filtra as linhas 9 (cabeçalho) até a linha 21, ignorando linhas vazias
-        macro_df = df_macro.iloc[9:22, [0, 1, 2, 4, 5]].dropna(subset=[0])
-        macro_df.columns = ["Ticker", "Indicador", "Classe", "Valor Atual", "Variação Dia"]
-        
-        # Divide em blocos de 2 colunas para renderizar no mobile (2x2)
-        num_cols = 2
-        for i in range(0, len(macro_df), num_cols):
-            cols = st.columns(num_cols)
-            for j in range(num_cols):
-                if i + j < len(macro_df):
-                    row = macro_df.iloc[i+j]
-                    ticker = row["Ticker"]
-                    nome = row["Indicador"]
-                    classe = row["Classe"]
-                    val = row["Valor Atual"]
-                    var = row["Variação Dia"]
-                    
-                    # Formatação do valor (Se for moeda, % ou pontos)
-                    if "BRL" in str(row["Ticker"]) or "R$" in str(val):
-                        val_str = fmt_brl(limpar_moeda(val))
-                    elif "%" in str(val) or "Taxas" in str(classe):
-                        val_str = fmt_pct(limpar_pct(val) * 100 if limpar_pct(val) < 1 else limpar_pct(val))
-                    else:
+    if df_macro.empty:
+        st.warning("Não foi possível carregar a aba 'Indicadores Macro'. Verifique se o nome da aba está escrito exatamente assim na sua planilha do Google (com espaços e acentos corretos) e se ela está compartilhada com o e-mail da Service Account.")
+    else:
+        try:
+            # Filtra as linhas 9 (cabeçalho) até a linha 21, ignorando linhas vazias
+            macro_df = df_macro.iloc[9:22, [0, 1, 2, 4, 5]].dropna(subset=[0])
+            macro_df.columns = ["Ticker", "Indicador", "Classe", "Valor Atual", "Variação Dia"]
+            
+            # Divide em blocos de 2 colunas para renderizar no mobile (2x2)
+            num_cols = 2
+            for i in range(0, len(macro_df), num_cols):
+                cols = st.columns(num_cols)
+                for j in range(num_cols):
+                    if i + j < len(macro_df):
+                        row = macro_df.iloc[i+j]
+                        ticker = row["Ticker"]
+                        nome = row["Indicador"]
+                        classe = row["Classe"]
+                        val = row["Valor Atual"]
+                        var = row["Variação Dia"]
+                        
+                        # Formatação do valor (Se for moeda, % ou pontos)
+                        if "BRL" in str(row["Ticker"]) or "R$" in str(val):
+                            val_str = fmt_brl(limpar_moeda(val))
+                        elif "%" in str(val) or "Taxas" in str(classe):
+                            val_str = fmt_pct(limpar_pct(val) * 100 if limpar_pct(val) < 1 else limpar_pct(val))
+                        else:
+                            try:
+                                val_float = float(val)
+                                val_str = f"{val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                            except:
+                                val_str = str(val)
+                        
+                        # Formatação da variação
                         try:
-                            val_float = float(val)
-                            val_str = f"{val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                            var_float = float(var) * 100 if abs(float(var)) < 1 else float(var)
+                            var_str = f"{var_float:.2f}%".replace(".", ",")
+                            cor_var = "#00FF00" if var_float >= 0 else "#FF4B4B"
                         except:
-                            val_str = str(val)
-                    
-                    # Formatação da variação
-                    try:
-                        var_float = float(var) * 100 if abs(float(var)) < 1 else float(var)
-                        var_str = f"{var_float:.2f}%".replace(".", ",")
-                        cor_var = "#00FF00" if var_float >= 0 else "#FF4B4B"
-                    except:
-                        var_str = str(var)
-                        cor_var = "gray"
-                    
-                    with cols[j]:
-                        with st.container(border=True):
-                            st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 5px; line-height: 1.1;'><b>{nome}</b><br><span style='font-size: 10px; color: gray;'>{classe}</span></div>", unsafe_allow_html=True)
-                            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{val_str}</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div style='text-align: center; font-size: 0.9rem; color: {cor_var}; font-weight: bold;'>{var_str}</div>", unsafe_allow_html=True)
-    except Exception as e:
-        st.warning("Não foi possível carregar os indicadores macro. Verifique a planilha.")
-        st.error(f"Erro detalhado: {e}")
+                            var_str = str(var)
+                            cor_var = "gray"
+                        
+                        with cols[j]:
+                            with st.container(border=True):
+                                st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 5px; line-height: 1.1;'><b>{nome}</b><br><span style='font-size: 10px; color: gray;'>{classe}</span></div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{val_str}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='text-align: center; font-size: 0.9rem; color: {cor_var}; font-weight: bold;'>{var_str}</div>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Erro ao processar os dados da aba Macro: {e}")
