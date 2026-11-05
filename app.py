@@ -264,46 +264,45 @@ def get_oportunidades_renda_fixa():
     return """<ul class="compact-list"><li><b>IPCA+:</b> Juro real volta a 8% ao ano; oportunidade em títulos longos. <a class="news-link" href="https://www.seudinheiro.com" target="_blank">[Ler mais]</a></li></ul>"""
 
 # ==========================================
-# INTEGRAÇÃO COM GOOGLE SHEETS
+# INTEGRAÇÃO COM GOOGLE SHEETS (LEITURA DINÂMICA)
 # ==========================================
-# 1. Valores de Fallback (Caso a planilha falhe)
+# Valores de Fallback (Caso a planilha falhe)
 inv_rv = 1147.50; pos_rv = 1147.65; rent_rv = 0.01; ganho_rv_real = 0.15
 inv_rf = 144373.68; pos_rf = 106779.65; rent_rf = 6.75; ganho_rf_real = 5129.14
 inv_maria = 42723.32; pos_maria = 47341.00; ganho_maria = 4617.68; rent_maria = 10.81
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df_sheets = conn.read(worksheet="479818767", ttl=10)
     
-    # 2. Procura as linhas e extrai os dados da planilha
-    for index, row in df_sheets.iterrows():
-        row_str = " ".join([str(val).upper() for val in row.values if pd.notna(val)])
-        
-        if "FAMÍLIA - META 500K" in row_str:
-            inv_rf = limpar_moeda(row.iloc[1])
-            pos_rf = limpar_moeda(row.iloc[2])
-            ganho_rf_real = limpar_moeda(row.iloc[3])
-            rent_rf = limpar_pct(row.iloc[4])
-            
-        elif "TOTAL" in row_str and ("R$ 1.147" in row_str or "R$ 1147" in row_str): 
-            # Linha total de Renda Variável
-            inv_rv = limpar_moeda(row.iloc[1])
-            pos_rv = limpar_moeda(row.iloc[4])
-            ganho_rv_real = limpar_moeda(row.iloc[6])
-            rent_rv = limpar_pct(row.iloc[7])
-            
-        elif "MARIA INVEST" in row_str:
-            inv_maria = limpar_moeda(row.iloc[1])
-            pos_maria = limpar_moeda(row.iloc[2])
-            ganho_maria = limpar_moeda(row.iloc[3])
-            rent_maria = limpar_pct(row.iloc[4])
-            
+    # Lendo as abas exatas da planilha
+    df_total = conn.read(worksheet="Total", ttl=10)
+    df_rv = conn.read(worksheet="Renda Variável", ttl=10)
+    df_rf = conn.read(worksheet="Renda Fixa", ttl=10)
+    df_maria = conn.read(worksheet="Investimentos Maria", ttl=10)
+    
+    # Extração dos dados da aba Total (Ajuste os índices conforme a estrutura real da sua planilha)
+    # Supondo que a linha 2 seja a linha de totais
+    inv_rf = limpar_moeda(df_total.iloc[1, 1]) # B2
+    pos_rf = limpar_moeda(df_total.iloc[1, 2]) # C2
+    ganho_rf_real = limpar_moeda(df_total.iloc[1, 3]) # D2
+    rent_rf = limpar_pct(df_total.iloc[1, 4]) # E2
+    
+    inv_rv = limpar_moeda(df_total.iloc[2, 1]) # B3
+    pos_rv = limpar_moeda(df_total.iloc[2, 2]) # C3
+    ganho_rv_real = limpar_moeda(df_total.iloc[2, 3]) # D3
+    rent_rv = limpar_pct(df_total.iloc[2, 4]) # E3
+    
+    inv_maria = limpar_moeda(df_total.iloc[3, 1]) # B4
+    pos_maria = limpar_moeda(df_total.iloc[3, 2]) # C4
+    ganho_maria = limpar_moeda(df_total.iloc[3, 3]) # D4
+    rent_maria = limpar_pct(df_total.iloc[3, 4]) # E4
+    
     st.sidebar.success("📈 Dados do Google Sheets carregados!")
     
 except Exception as e:
     st.sidebar.warning(f"⚠️ Usando dados locais (Planilha offline: {e})")
 
-# 3. Cálculo do Header: Apenas RV + RF (Sem a Maria)
+# Cálculo do Header: Apenas RV + RF (Sem a Maria)
 inv_geral = inv_rv + inv_rf
 pos_geral = pos_rv + pos_rf
 rent_geral = ((pos_geral - inv_geral) / inv_geral) * 100 if inv_geral > 0 else 0
@@ -345,8 +344,25 @@ aba_renda_variavel, aba_renda_fixa, aba_maria = st.tabs([
 with aba_renda_variavel:
     st.subheader("Sua Carteira de Cotações")
     
-    carteira_acoes = ['XPML11', 'MCCI11', 'ITSA4', 'BOVA11', 'CEAB3', 'VALE3', 'WEGE3']
-    inv_ativos = [99.73, 89.89, 130.10, 173.23, 107.40, 322.70, 224.45]
+    # Extraindo dados dinâmicos da aba Renda Variável
+    # Ajuste os índices conforme a estrutura real da planilha
+    try:
+        # Supondo que os ativos comecem na linha 4 (índice 3) e as colunas sejam:
+        # A: Ativo, B: Tipo, C: Setor, D: Cotas, E: Preço Pago, F: Preço Atual, G: Investido, H: Posição, I: Ganho, J: Rentab %, K: P/L, L: Div Yield %, M: Share %
+        carteira_acoes = df_rv.iloc[3:, 0].dropna().tolist()
+        inv_ativos = df_rv.iloc[3:, 6].apply(limpar_moeda).tolist()
+        tipos = df_rv.iloc[3:, 1].fillna("Ação").tolist()
+        setores = df_rv.iloc[3:, 2].fillna("-").tolist()
+        pls = df_rv.iloc[3:, 10].apply(limpar_pct).tolist()
+        dys = df_rv.iloc[3:, 11].apply(limpar_pct).tolist()
+    except:
+        # Fallback
+        carteira_acoes = ['XPML11', 'MCCI11', 'ITSA4', 'BOVA11', 'CEAB3', 'VALE3', 'WEGE3']
+        inv_ativos = [99.73, 89.89, 130.10, 173.23, 107.40, 322.70, 224.45]
+        tipos = ["FII", "FII", "Ação", "ETF", "Ação", "Ação", "Ação"]
+        setores = ["Shoppings", "Papel", "Bancos", "Índice", "Varejo", "Mineração", "Motores"]
+        pls = [0.0] * len(carteira_acoes)
+        dys = [0.0] * len(carteira_acoes)
     
     resumo_html = f"""
     <div class="resumo-grid">
@@ -374,7 +390,7 @@ with aba_renda_variavel:
                 min_6m = hist['Low'].tail(126).min()
                 hist_5a = hist['Low'].tail(1260); min_5a = hist_5a.min()
                 texto_data_5a = formatar_data_min(hist_5a.idxmin())
-                share = (inv_ativos[i] / inv_rv) * 100
+                share = (inv_ativos[i] / inv_rv) * 100 if inv_rv > 0 else 0
                 sinal = "COMPRAR" if rsi < 35 else ("VENDER" if rsi > 70 else "MANTER")
                 cor_sinal = "#00FF00" if rsi < 35 else ("#FF4B4B" if rsi > 70 else "#808080")
                 nome_empresa = dicionario_empresas.get(ativo, "")
@@ -382,11 +398,18 @@ with aba_renda_variavel:
                 metricas = buscar_metricas_fundamentalistas(ativo)
                     
                 with st.container(border=True):
-                    st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link}' target='_blank' style='font-size: 16px; font-weight: bold;'>{ativo}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link}' target='_blank' style='font-size: 16px; font-weight: bold;'>{ativo}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa} | {setores[i]}</span></div>", unsafe_allow_html=True)
                     st.metric(label="Cotação Atual", value=fmt_brl(preco_atual), delta=f"{variacao_pct:.2f}%".replace(".", ","), label_visibility="collapsed")
                     
                     html_tecnico = f"<div style='font-size: 12px; line-height: 1.3; margin-top: -5px; margin-bottom: 5px;'>📉 <b>Mín 6m:</b> {fmt_brl(min_6m)}<br>⏳ <b>Mín 5a:</b> {fmt_brl(min_5a)}{texto_data_5a}<br>📊 <b>RSI:</b> {rsi:.1f}".replace(".", ",") + f"<br>🤖 <b>Sinal:</b> <span style='color:{cor_sinal}; font-weight: bold;'>{sinal}</span><br>💼 <b>Share:</b> {share:.1f}%".replace(".", ",") + "</div>"
                     st.markdown(html_tecnico, unsafe_allow_html=True)
+                    
+                    # Novos indicadores
+                    if pls[i] > 0 or dys[i] > 0:
+                        html_ind = "<hr style='margin: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
+                        if pls[i] > 0: html_ind += f"<div style='font-size: 11px;'>💵 <b>P/L:</b> {pls[i]:.1f}</div>"
+                        if dys[i] > 0: html_ind += f"<div style='font-size: 11px;'>💰 <b>Div. Yield:</b> {dys[i]:.1f}%</div>"
+                        st.markdown(html_ind, unsafe_allow_html=True)
                     
                     if metricas.get("receita") or metricas.get("divida") or metricas.get("roe"):
                         html_indicadores = "<hr style='margin: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
@@ -410,7 +433,7 @@ with aba_renda_variavel:
                     min_6m = hist['Low'].tail(126).min()
                     hist_5a = hist['Low'].tail(1260); min_5a = hist_5a.min()
                     texto_data_5a = formatar_data_min(hist_5a.idxmin())
-                    share = (inv_ativos[i+1] / inv_rv) * 100
+                    share = (inv_ativos[i+1] / inv_rv) * 100 if inv_rv > 0 else 0
                     sinal = "COMPRAR" if rsi < 35 else ("VENDER" if rsi > 70 else "MANTER")
                     cor_sinal = "#00FF00" if rsi < 35 else ("#FF4B4B" if rsi > 70 else "#808080")
                     nome_empresa = dicionario_empresas.get(ativo, "")
@@ -418,11 +441,17 @@ with aba_renda_variavel:
                     metricas = buscar_metricas_fundamentalistas(ativo)
                         
                     with st.container(border=True):
-                        st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link}' target='_blank' style='font-size: 16px; font-weight: bold;'>{ativo}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa}</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; margin-top: -5px; margin-bottom: 2px; line-height: 1.1;'><a class='ticker-link' href='{link}' target='_blank' style='font-size: 16px; font-weight: bold;'>{ativo}</a><br><span style='font-size: 10px; color: gray;'>{nome_empresa} | {setores[i+1]}</span></div>", unsafe_allow_html=True)
                         st.metric(label="Cotação Atual", value=fmt_brl(preco_atual), delta=f"{variacao_pct:.2f}%".replace(".", ","), label_visibility="collapsed")
                         
                         html_tecnico = f"<div style='font-size: 12px; line-height: 1.3; margin-top: -5px; margin-bottom: 5px;'>📉 <b>Mín 6m:</b> {fmt_brl(min_6m)}<br>⏳ <b>Mín 5a:</b> {fmt_brl(min_5a)}{texto_data_5a}<br>📊 <b>RSI:</b> {rsi:.1f}".replace(".", ",") + f"<br>🤖 <b>Sinal:</b> <span style='color:{cor_sinal}; font-weight: bold;'>{sinal}</span><br>💼 <b>Share:</b> {share:.1f}%".replace(".", ",") + "</div>"
                         st.markdown(html_tecnico, unsafe_allow_html=True)
+                        
+                        if pls[i+1] > 0 or dys[i+1] > 0:
+                            html_ind = "<hr style='margin: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
+                            if pls[i+1] > 0: html_ind += f"<div style='font-size: 11px;'>💵 <b>P/L:</b> {pls[i+1]:.1f}</div>"
+                            if dys[i+1] > 0: html_ind += f"<div style='font-size: 11px;'>💰 <b>Div. Yield:</b> {dys[i+1]:.1f}%</div>"
+                            st.markdown(html_ind, unsafe_allow_html=True)
                         
                         if metricas.get("receita") or metricas.get("divida") or metricas.get("roe"):
                             html_indicadores = "<hr style='margin: 4px 0; border-top: 1px solid rgba(128, 128, 128, 0.3);'>"
@@ -491,11 +520,21 @@ with aba_renda_variavel:
 with aba_renda_fixa:
     st.subheader("Painel de Renda Fixa")
     
-    ativos_fam = ["IPCA+ 2032", "PRÉ 2032", "Selic 2031"]
-    inv_fam = [2987.73, 1476.27, 96038.86]
-    pos_fam = [3092.00, 1457.00, 101083.00]
-    gan_fam = [104.27, -19.27, 5044.14]
-    rent_fam = [3.49, -1.31, 5.25]
+    # Extraindo dados dinâmicos da aba Renda Fixa
+    try:
+        # Supondo que os ativos comecem na linha 2 (índice 1) e as colunas sejam:
+        # A: Ativo, B: Vencimento, C: Taxa, D: Investido, E: Posição, F: Ganho, G: Rentab, H: Share
+        ativos_fam = df_rf.iloc[1:, 0].dropna().tolist()
+        inv_fam = df_rf.iloc[1:, 3].apply(limpar_moeda).tolist()
+        pos_fam = df_rf.iloc[1:, 4].apply(limpar_moeda).tolist()
+        gan_fam = df_rf.iloc[1:, 5].apply(limpar_moeda).tolist()
+        rent_fam = df_rf.iloc[1:, 6].apply(limpar_pct).tolist()
+    except:
+        ativos_fam = ["IPCA+ 2032", "PRÉ 2032", "Selic 2031"]
+        inv_fam = [2987.73, 1476.27, 96038.86]
+        pos_fam = [3092.00, 1457.00, 101083.00]
+        gan_fam = [104.27, -19.27, 5044.14]
+        rent_fam = [3.49, -1.31, 5.25]
 
     resumo_rf_html = f"""
     <div class="resumo-grid">
@@ -564,11 +603,21 @@ with aba_renda_fixa:
 with aba_maria:
     st.subheader("Painel de Renda Fixa - Maria")
     
-    ativos_maria = ["IPCA+ 2029", "IPCA+ 2032", "IPCA+ 2035 c/juros sem", "PRÉ 2032", "PRÉ 2035 c/juros sem", "SELIC 2031"]
-    inv_maria_arr = [5779.67, 1580.87, 5444.10, 1452.61, 2370.30, 26095.77]
-    pos_maria_arr = [6528.00, 1636.00, 5658.00, 1475.00, 2254.00, 29790.00]
-    gan_maria_arr = [748.33, 55.13, 213.90, 22.39, -116.30, 3694.23]
-    rent_maria_arr = [12.95, 3.49, 3.93, 1.54, -4.91, 14.16]
+    # Extraindo dados dinâmicos da aba Investimentos Maria
+    try:
+        # Supondo que os ativos comecem na linha 3 (índice 2) e as colunas sejam:
+        # A: Ativo, B: Vencimento, C: Taxa, D: Investido, E: Posição, F: Ganho, G: Rentab, H: Share
+        ativos_maria = df_maria.iloc[2:, 0].dropna().tolist()
+        inv_maria_arr = df_maria.iloc[2:, 3].apply(limpar_moeda).tolist()
+        pos_maria_arr = df_maria.iloc[2:, 4].apply(limpar_moeda).tolist()
+        gan_maria_arr = df_maria.iloc[2:, 5].apply(limpar_moeda).tolist()
+        rent_maria_arr = df_maria.iloc[2:, 6].apply(limpar_pct).tolist()
+    except:
+        ativos_maria = ["IPCA+ 2029", "IPCA+ 2032", "IPCA+ 2035 c/juros sem", "PRÉ 2032", "PRÉ 2035 c/juros sem", "SELIC 2031"]
+        inv_maria_arr = [5779.67, 1580.87, 5444.10, 1452.61, 2370.30, 26095.77]
+        pos_maria_arr = [6528.00, 1636.00, 5658.00, 1475.00, 2254.00, 29790.00]
+        gan_maria_arr = [748.33, 55.13, 213.90, 22.39, -116.30, 3694.23]
+        rent_maria_arr = [12.95, 3.49, 3.93, 1.54, -4.91, 14.16]
 
     resumo_maria_html = f"""
     <div class="resumo-grid">
@@ -626,4 +675,3 @@ with aba_maria:
     st.divider()
     st.markdown("#### 🚀 Oportunidades do Mercado - Fora da Carteira")
     st.markdown(get_oportunidades_renda_fixa(), unsafe_allow_html=True)
-    
